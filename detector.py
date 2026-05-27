@@ -104,13 +104,13 @@ class AnomalyDetector:
         )
     
 
-if __name__ == "__main__":
-    from generator import generate_metrics
+# if __name__ == "__main__":
+#     from generator import generate_metrics
 
-    detector = AnomalyDetector(window_size=5)
-    for metric in generate_metrics(num_records=20, interval=0):
-        anomalies = detector.check_anomaly(metric)
+#     detector = AnomalyDetector(window_size=5)
+#     for metric in generate_metrics(num_records=20, interval=0):
+#         anomalies = detector.check_anomaly(metric)
 
-    print(repr(detector))
-    print(f"Total alerts: {len(detector)}")
-    print(f"CPU moving avg: {detector.moving_average('cpu_percent')}")
+#     print(repr(detector))
+#     print(f"Total alerts: {len(detector)}")
+#     print(f"CPU moving avg: {detector.moving_average('cpu_percent')}")

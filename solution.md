@@ -101,3 +101,65 @@ I added two dunder (magic) methods to make the detector feel like a proper Pytho
 `__len__` lets you write `len(detector)` and get back the total number of alerts raised. Without it, you would have to write `detector._total_alerts` every time — which exposes the internal variable and looks messy.
 
 `__repr__` controls what prints when you inspect the object. Instead of something useless like `<__main__.AnomalyDetector object at 0x000001A3>`, it now prints `AnomalyDetector(window_size=5, total_alerts=3)` — instantly useful for debugging. Any time you print the detector or check it in the terminal, you see the real state at a glance.
+
+---
+
+# Task 3 — Alert Router Design Decisions
+
+---
+
+## Paragraph 1 — Why I Used a Closure Instead of a Class
+
+For the alert router I used a closure — a function that returns another function — instead of building a class.
+
+The reason is that the router only needs to do one thing: take an anomaly and figure out which team to send it to. That is a single responsibility, and a closure handles it cleanly without the overhead of a class. The `team_config` dictionary (which maps teams to services and channels) is captured inside the inner function and stays private. Nobody outside can accidentally read or change it.
+
+If I had used a class, I would need an `__init__`, a method, and `self` everywhere — just to do one thing. A closure keeps it short and focused.
+
+---
+
+## Paragraph 2 — Why I Used ABC and `@abstractmethod` for `BaseHandler`
+
+Before writing `SlackHandler`, `PagerDutyHandler`, and `EmailHandler`, I created a `BaseHandler` class that inherits from `ABC` (Abstract Base Class).
+
+The purpose is to create a **contract**. The contract says: every handler that exists in this system MUST have a `send()` method. If someone creates a new handler class in the future and forgets to write `send()`, Python will raise an error the moment they try to create an object from it — not later when the program is running and something mysteriously fails.
+
+Without ABC, a missing `send()` method would only crash the program at the worst possible moment — in production, when a real alert needs to be sent. With ABC it crashes at the earliest safe moment — at startup.
+
+---
+
+## Paragraph 3 — The Strategy Pattern in `AlertDispatcher`
+
+The `AlertDispatcher` class uses what is called the Strategy Pattern. Instead of a long `if/elif` chain to decide which handler to use, I stored all handlers in a dictionary:
+
+```python
+self._handlers = {
+    "slack":     SlackHandler(),
+    "pagerduty": PagerDutyHandler(),
+    "email":     EmailHandler(),
+}
+```
+
+When an anomaly comes in, I just do `self._handlers.get(channel)` to pick the right one. This is clean, easy to extend, and easy to read. If a new channel like `"teams"` is added in the future, I add one line to the dictionary and a new handler class — nothing else changes.
+
+The handler objects are created once in `__init__` and reused every time. I do not create a new `SlackHandler()` on every dispatch call, which would be wasteful.
+
+---
+
+## Paragraph 4 — How the Routing Logic Works
+
+The `route()` function (the closure) loops through the `team_config` dictionary and checks if the anomaly's `service_name` belongs to any team's service list. The moment it finds a match, it dispatches the alert and immediately returns.
+
+The `return` after dispatching is important. Without it, the loop would keep going and might send the same alert to multiple teams if a service accidentally appeared in more than one team config. The early return makes the behaviour predictable — one service, one team, done.
+
+If no team claims the service, a fallback message prints so the problem does not silently disappear. Silent failures are one of the hardest bugs to debug in a real system.
+
+---
+
+## Paragraph 5 — Why Handlers Just Print Instead of Making Real API Calls
+
+All three handlers — Slack, PagerDuty, and Email — just print formatted messages to the terminal instead of making actual HTTP requests or sending real emails.
+
+This is a deliberate decision for a demo and development tool. Real API calls would require API keys, network access, and external service accounts — none of which are appropriate for a local CLI tool being tested. The print output gives exactly the same information you would see in a real alert, so you can verify the routing logic is correct without any external dependencies.
+
+In a real production version, you would replace the `print()` inside each `send()` method with the actual API call. Everything else — the routing, the dispatcher, the closure — stays exactly the same. That is the power of the strategy pattern.
