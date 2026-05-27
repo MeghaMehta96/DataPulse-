@@ -30,11 +30,11 @@ def generate_metrics(num_records: int, interval: float) -> Generator[dict, None,
     
     yield {
       "timestamp": datetime.now().isoformat(timespec="seconds"),
-      "service": random.choice(services),
-      "cpu": cpu,
-      "memory": memory,
-      "disk": disk,
-      "latency": latency
+      "service_name": random.choice(services),
+      "cpu_percent": cpu,
+      "memory_percent": memory,
+      "disk_percent": disk,
+      "latency_ms": latency
     }
 
     if interval > 0:

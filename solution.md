@@ -1,4 +1,4 @@
-# SOLUTION.md — Design Decisions for Task 1 (Data Generator)
+# SOLUTION.md — Design Decisions
 
 ---
 
@@ -49,3 +49,55 @@ I added full type hints to the function signature: `generate_metrics(num_records
 Type hints are not required by Python but they make the code much easier to understand. Anyone reading the function knows exactly what to pass in and what they will get back without reading the whole function body. The return type `Generator[dict, None, None]` tells you: this yields dictionaries, you cannot send values into it, and it returns nothing when done.
 
 For timestamps I used `datetime.now().isoformat(timespec="seconds")` which produces a clean format like `"2026-05-27T10:32:01"` — no microseconds, easy to read, and follows the standard ISO 8601 format used in almost all production logging systems.
+
+---
+
+# Task 2 — Anomaly Detector Design Decisions
+
+---
+
+## Paragraph 1 — Why I Used a Class Instead of Just Functions
+
+For the anomaly detector I chose to build a class called `AnomalyDetector` instead of writing standalone functions.
+
+The reason is that the detector needs to **remember things between calls** — like how many alerts have happened so far, and the last 5 readings for each metric. A plain function forgets everything the moment it finishes. A class keeps that state alive inside `self` as long as the object exists.
+
+Think of it like a doctor who keeps a patient's history file on the desk. Every time a new reading comes in, the doctor does not start from zero — they look at the history and make a better decision.
+
+---
+
+## Paragraph 2 — Why I Used `collections.deque` for the Sliding Window
+
+To calculate the moving average, I needed to always keep the last 5 readings and throw away anything older. I used `collections.deque(maxlen=5)` for this.
+
+A regular list does not have a size limit. If I used a list I would have to manually check the length and remove old items every time — extra code, extra bugs. A `deque` with `maxlen` does this automatically. The moment you add a 6th item, it drops the oldest one on its own. No extra code needed.
+
+This is important because moving averages help spot slow trends. One spike could be random. But if the CPU average over the last 5 readings is 88%, that is a real problem developing.
+
+---
+
+## Paragraph 3 — Why `THRESHOLDS` is a Class Variable, Not an Instance Variable
+
+I put `THRESHOLDS` outside `__init__` at the top of the class. This makes it a **class variable** — shared by every single `AnomalyDetector` object.
+
+I did not put it inside `__init__` because the threshold limits are not specific to one detector — they are the rules for the whole system. Every detector should use the same numbers. If you ever need to change the CPU threshold from 90 to 85, you change it in one place and every detector in the whole program automatically gets the update.
+
+---
+
+## Paragraph 4 — How I Built the Decorator to Log Alerts
+
+I wrote a `@staticmethod` called `decorate_log` that wraps the `check_anomaly` method. Whenever `check_anomaly` runs and finds anomalies, the decorator automatically prints an `[ALERT]` line for each one — without me having to put a print statement inside `check_anomaly` itself.
+
+I used `@staticmethod` because the decorator does not need access to `self` or `cls`. It is just a helper that takes a function, wraps it, and returns the wrapped version. I also used `@functools.wraps(func)` inside it so the wrapped function keeps its original name and docstring, which matters when debugging.
+
+The key thing I learned here is that the decorator must be defined **before** `check_anomaly` in the class body. Python reads the class top to bottom, so if you put the decorator below the method it tries to decorate, it does not exist yet and the program crashes.
+
+---
+
+## Paragraph 5 — Why I Added `__len__` and `__repr__`
+
+I added two dunder (magic) methods to make the detector feel like a proper Python object.
+
+`__len__` lets you write `len(detector)` and get back the total number of alerts raised. Without it, you would have to write `detector._total_alerts` every time — which exposes the internal variable and looks messy.
+
+`__repr__` controls what prints when you inspect the object. Instead of something useless like `<__main__.AnomalyDetector object at 0x000001A3>`, it now prints `AnomalyDetector(window_size=5, total_alerts=3)` — instantly useful for debugging. Any time you print the detector or check it in the terminal, you see the real state at a glance.
