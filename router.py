@@ -67,32 +67,32 @@ def create_alert_router(team_config: dict) -> Callable[[dict], None]:
 
     return route  
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    TEAM_CONFIG = {
-        "infra-team": {
-            "services": ["auth-service", "gateway"],
-            "channels": ["slack", "pagerduty"],
-        },
-        "data-team": {
-            "services": ["etl-service", "ml-pipeline"],
-            "channels": ["slack", "email"],
-        },
-    }
+#     TEAM_CONFIG = {
+#         "infra-team": {
+#             "services": ["auth-service", "gateway"],
+#             "channels": ["slack", "pagerduty"],
+#         },
+#         "data-team": {
+#             "services": ["etl-service", "ml-pipeline"],
+#             "channels": ["slack", "email"],
+#         },
+#     }
 
-    router = create_alert_router(TEAM_CONFIG)
+#     router = create_alert_router(TEAM_CONFIG)
 
-    # Fake anomaly — same shape as what detector.py produces
-    test_anomaly = {
-        "timestamp":    "2026-05-27T10:32:01",
-        "service_name": "auth-service",
-        "metric":       "cpu_percent",
-        "value":        95.3,
-        "severity":     "WARNING",
-    }
+#     # Fake anomaly — same shape as what detector.py produces
+#     test_anomaly = {
+#         "timestamp":    "2026-05-27T10:32:01",
+#         "service_name": "auth-service",
+#         "metric":       "cpu_percent",
+#         "value":        95.3,
+#         "severity":     "WARNING",
+#     }
 
-    router(test_anomaly)
+#     router(test_anomaly)
 
-    # Test unknown service
-    test_anomaly["service_name"] = "unknown-service"
-    router(test_anomaly)
+#     # Test unknown service
+#     test_anomaly["service_name"] = "unknown-service"
+#     router(test_anomaly)

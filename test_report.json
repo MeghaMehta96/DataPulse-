@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-05-27T09:34:21",
+  "total_records_processed": 50,
+  "anomaly_summary": {
+    "total_alerts": 5,
+    "by_severity": {
+      "WARNING": 3,
+      "CRITICAL": 2
+    },
+    "by_service": {
+      "auth-service": 3,
+      "gateway": 2
+    },
+    "by_metric": {
+      "cpu_percent": 3,
+      "latency_ms": 2
+    }
+  },
+  "top_5_critical_alerts": [],
+  "moving_averages": {
+    "cpu_percent": 52.3,
+    "memory_percent": 61.8,
+    "disk_percent": 54.2,
+    "latency_ms": 145.7
+  }
+}

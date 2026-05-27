@@ -163,3 +163,55 @@ All three handlers — Slack, PagerDuty, and Email — just print formatted mess
 This is a deliberate decision for a demo and development tool. Real API calls would require API keys, network access, and external service accounts — none of which are appropriate for a local CLI tool being tested. The print output gives exactly the same information you would see in a real alert, so you can verify the routing logic is correct without any external dependencies.
 
 In a real production version, you would replace the `print()` inside each `send()` method with the actual API call. Everything else — the routing, the dispatcher, the closure — stays exactly the same. That is the power of the strategy pattern.
+
+---
+
+# Task 4 — Report Writer Design Decisions
+
+---
+
+## Paragraph 1 — Why I Used a Context Manager Instead of a Regular Function
+
+For writing the final report I built a class called `ReportWriter` that works as a context manager — used with the `with` keyword — instead of a plain function that you call manually at the end.
+
+The reason is reliability. If I wrote a regular function like `save_report()`, the programmer using the code has to remember to call it. If the program crashes halfway through, or if someone forgets to call it, no report gets saved. A context manager removes that responsibility from the caller entirely. Python calls `__exit__` automatically the moment the `with` block ends — whether it ended normally or because of an error. The file is always saved.
+
+---
+
+## Paragraph 2 — Why `__exit__` Calls `_save()` and Returns `False`
+
+Inside `__exit__` I do two things: call `self._save()` and then return `False`.
+
+Calling `_save()` is the actual work — it builds the report dict and writes it to disk. This happens no matter what. Even if an exception crashed the program inside the `with` block, `__exit__` still runs and `_save()` still saves whatever data was collected up to that point. This means you always get a partial report instead of nothing.
+
+Returning `False` tells Python — "I have finished my cleanup, but do not hide the error". If something crashed, the error still propagates normally so the developer knows about it. Returning `True` would swallow the exception silently, which would make bugs very hard to find.
+
+---
+
+## Paragraph 3 — Why I Separated `_save()` Into Its Own Method
+
+I could have put all the file-writing code directly inside `__exit__`, but I chose to put it in a private method called `_save()` instead.
+
+The reason is the same reason you tidy up a messy room by sorting things into boxes — it is easier to find, read, and fix. `__exit__` stays clean and reads like a sentence: "save, then return". The actual details of how saving works live in `_save()`. If the file-writing logic ever needs to change — for example, switching from JSON to YAML — I change one method without touching `__exit__` at all.
+
+The underscore prefix on `_save` signals to other developers that this is an internal helper, not meant to be called from outside the class.
+
+---
+
+## Paragraph 4 — How `add_section` Builds the Report Piece by Piece
+
+Instead of passing the entire report structure in one go, I built the `add_section()` method so that sections can be added one at a time inside the `with` block.
+
+Each call to `add_section("title", data)` just does `self._sections["title"] = data` — a simple dictionary assignment. When `_save()` eventually runs, it combines `generated_at` with all the sections using dict unpacking (`**self._sections`) into one final report dict and writes it all at once.
+
+This makes the reporter flexible. You can add as many or as few sections as you want. The reporter does not care what the sections contain — it just stores them and dumps them to JSON at the end.
+
+---
+
+## Paragraph 5 — Why I Used `try/except` Around the File Write
+
+The file writing inside `_save()` is wrapped in a `try/except OSError` block.
+
+Writing files can fail for reasons completely outside the program's control — the disk might be full, the folder might not exist, or the program might not have permission to write to that location. If I let these errors crash the program with an ugly Python traceback, the user would have no idea what went wrong. With `try/except`, they get a clear message like `[ERROR] Failed to write report: [Errno 13] Permission denied`.
+
+I caught `OSError` specifically rather than the broad `Exception` because file-related failures in Python always raise `OSError` or one of its subclasses (`FileNotFoundError`, `PermissionError`). Catching only what you expect is a good habit — it means any other unexpected error still crashes loudly instead of being silently swallowed.
