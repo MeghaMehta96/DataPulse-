@@ -198,6 +198,61 @@ The underscore prefix on `_save` signals to other developers that this is an int
 
 ---
 
+# Task 5 — CLI Entry Point Design Decisions
+
+---
+
+## Paragraph 1 — Why I Used `argparse` Instead of `sys.argv`
+
+To let users control how the program runs from the terminal, I used Python's built-in `argparse` module instead of reading `sys.argv` directly.
+
+`sys.argv` gives you a raw list of strings — you have to manually check if the user typed `--records`, convert the value to an integer yourself, and decide what error message to show if they typed something wrong. That is a lot of repetitive work that is easy to get wrong.
+
+`argparse` does all of that automatically. You declare what arguments the program accepts — their names, types, defaults, and help text — and `argparse` handles the parsing, type conversion, and error messages for free. It also generates a `--help` output automatically, so any user can type `python datapulse.py --help` and see exactly what the program does without reading the source code.
+
+---
+
+## Paragraph 2 — Why I Used `--verbose` as a Flag, Not a Value
+
+The `--verbose` argument is defined with `action="store_true"`, which means it does not take a value — it is either present or absent.
+
+When the user types `--verbose`, `args.verbose` becomes `True`. When they do not type it, it defaults to `False`. This is the standard pattern for on/off switches in CLI tools. It is simpler than asking the user to type `--verbose true` or `--verbose 1`, and it matches how most popular command-line tools behave (like `git --verbose` or `pip install --quiet`).
+
+---
+
+## Paragraph 3 — Why I Added `KeyboardInterrupt` Handling
+
+When a user presses `Ctrl+C` to stop the program early, Python normally raises a `KeyboardInterrupt` exception and prints a messy traceback. Instead of letting that happen, I wrapped the main processing loop in a `try/except KeyboardInterrupt` block.
+
+When the user interrupts, the program catches it cleanly, prints a helpful message, and then continues to the report-writing code below. This means the user always gets a partial report with whatever data was collected before they stopped — instead of losing everything. A tool that handles interruptions gracefully feels professional and safe to use.
+
+---
+
+## Paragraph 4 — How `_build_report_data()` Works as a Helper
+
+I put all the report-building logic — counting alerts by severity, by service, by metric, sorting the top 5 critical alerts — into a separate helper function called `_build_report_data()`.
+
+If I had put this logic directly inside `main()`, the function would have been very long and hard to follow. `main()` should read like a story: "parse arguments, create objects, run the loop, build the report, save it". The details of building the report belong in a separate place.
+
+I used `defaultdict(int)` from the `collections` module for the counting. A regular `dict` would crash with a `KeyError` the first time you try to increment a key that does not exist yet. `defaultdict(int)` automatically starts every new key at `0`, so you can do `by_severity["CRITICAL"] += 1` without checking if `"CRITICAL"` is already in the dict.
+
+---
+
+## Paragraph 5 — Why I Used `if __name__ == "__main__"`
+
+At the bottom of the file I have:
+
+```python
+if __name__ == "__main__":
+    main()
+```
+
+This is a Python safety guard. When Python runs a file directly (`python datapulse.py`), the special variable `__name__` is set to `"__main__"`, so `main()` runs. But if another file imports this module — for example, a test file that imports `_build_report_data` — `__name__` is set to the module's name instead, and `main()` does NOT run automatically.
+
+Without this guard, importing anything from `datapulse.py` would immediately start the whole program — including generating metrics and printing output. That would make the code untestable and difficult to reuse. The guard is a small habit that makes a big difference.
+
+---
+
 ## Paragraph 4 — How `add_section` Builds the Report Piece by Piece
 
 Instead of passing the entire report structure in one go, I built the `add_section()` method so that sections can be added one at a time inside the `with` block.

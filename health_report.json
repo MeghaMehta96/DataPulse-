@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-05-27T09:51:11",
+  "total_records_processed": 100,
+  "anomaly_summary": {
+    "total_alerts": 43,
+    "by_severity": {
+      "CRITICAL": 68,
+      "WARNING": 79
+    },
+    "by_service": {
+      "payment-service": 57,
+      "gateway": 52,
+      "ml-pipeline": 9,
+      "etl-service": 29
+    },
+    "by_metric": {
+      "memory_percent": 32,
+      "latency_ms": 43,
+      "disk_percent": 34,
+      "cpu_percent": 38
+    }
+  },
+  "top_5_critical_alerts": [
+    {
+      "timestamp": "2026-05-27T09:51:11",
+      "service_name": "etl-service",
+      "metric": "latency_ms",
+      "value": 1597.9,
+      "severity": "CRITICAL"
+    },
+    {
+      "timestamp": "2026-05-27T09:51:11",
+      "service_name": "etl-service",
+      "metric": "latency_ms",
+      "value": 1597.9,
+      "severity": "CRITICAL"
+    },
+    {
+      "timestamp": "2026-05-27T09:51:11",
+      "service_name": "etl-service",
+      "metric": "latency_ms",
+      "value": 1597.9,
+      "severity": "CRITICAL"
+    },
+    {
+      "timestamp": "2026-05-27T09:51:11",
+      "service_name": "etl-service",
+      "metric": "latency_ms",
+      "value": 1597.9,
+      "severity": "CRITICAL"
+    },
+    {
+      "timestamp": "2026-05-27T09:51:11",
+      "service_name": "payment-service",
+      "metric": "latency_ms",
+      "value": 1544.4,
+      "severity": "CRITICAL"
+    }
+  ],
+  "moving_averages": {
+    "cpu_percent": 73.05999999999999,
+    "memory_percent": 73.72,
+    "disk_percent": 72.52000000000001,
+    "latency_ms": 700.8599999999999
+  }
+}

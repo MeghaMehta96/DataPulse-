@@ -84,6 +84,7 @@ class AnomalyDetector:
                     "value": value,
                     "severity": severity
                 })
+                self._total_alerts += 1
         return anomalies
     
     def moving_average(self, metric_name: str) -> Optional[float]:
